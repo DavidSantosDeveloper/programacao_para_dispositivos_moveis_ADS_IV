@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path/path.dart' as path;
 
 void main() {
   runApp(MyApp());
@@ -33,18 +34,18 @@ class _GalleryPickerState extends State<GalleryPicker> {
     if (Platform.isAndroid) {
       var storagePermission = await Permission.storage.status;
 
-      // Verifica a versão do Android
-      if (Platform.version.contains('11') ||
-          Platform.version.contains('12') ||
-          Platform.version.contains('13')) {
+      // Verifique a versão do Android
+      if (Platform.operatingSystemVersion.contains('Android 11') ||
+          Platform.operatingSystemVersion.contains('Android 12') ||
+          Platform.operatingSystemVersion.contains('Android 13')) {
         storagePermission = await Permission.manageExternalStorage.status;
       }
 
-      // Solicita a permissão se não estiver concedida
+      // Solicita a permissão correta
       if (!storagePermission.isGranted) {
-        if (Platform.version.contains('11') ||
-            Platform.version.contains('12') ||
-            Platform.version.contains('13')) {
+        if (Platform.operatingSystemVersion.contains('Android 11') ||
+            Platform.operatingSystemVersion.contains('Android 12') ||
+            Platform.operatingSystemVersion.contains('Android 13')) {
           storagePermission = await Permission.manageExternalStorage.request();
         } else {
           storagePermission = await Permission.storage.request();
@@ -52,7 +53,6 @@ class _GalleryPickerState extends State<GalleryPicker> {
       }
 
       if (storagePermission.isGranted) {
-        // Abre a galeria se a permissão for concedida
         try {
           final String? imagePath =
               await MyApp.platform.invokeMethod('openGallery');
@@ -74,14 +74,36 @@ class _GalleryPickerState extends State<GalleryPicker> {
 
   // Método para obter a descrição da imagem usando a API Gemini
   Future<void> _getImageDescription() async {
-    // Substitua pela sua chave de API
-    final apiKey = 'AIzaSyD_VbN3miCOIDOr0r2wDvWbzUufg9eBzjc';
+    final apiKey = 'YOUR_API_KEY';
     final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     try {
       final imageBytes = await File(_imagePath!).readAsBytes();
+      final fileType = path.extension(_imagePath!).toLowerCase();
+
+      // Ajusta o tipo de conteúdo da imagem conforme o formato detectado
+      String mimeType;
+      switch (fileType) {
+        case '.png':
+          mimeType = 'image/png';
+          break;
+        case '.webp':
+          mimeType = 'image/webp';
+          break;
+        case '.gif':
+          mimeType = 'image/gif';
+          break;
+        case '.bmp':
+          mimeType = 'image/bmp';
+          break;
+        case '.jpeg':
+        case '.jpg':
+        default:
+          mimeType = 'image/jpeg';
+      }
+
       final prompt = TextPart("Descreva o conteúdo desta imagem.");
-      final imagePart = DataPart('image/jpg', imageBytes);
+      final imagePart = DataPart(mimeType, imageBytes);
 
       final response = await model.generateContent([
         Content.multi([prompt, imagePart])
