@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path/path.dart' as path;
+import 'package:flutter_tts/flutter_tts.dart';
 
 void main() {
   runApp(MyApp());
@@ -27,20 +29,19 @@ class GalleryPicker extends StatefulWidget {
 class _GalleryPickerState extends State<GalleryPicker> {
   String? _imagePath;
   String? _imageDescription;
+  FlutterTts flutterTts = FlutterTts();
 
   // Método para abrir a galeria e obter o caminho da imagem
   Future<void> _openGallery() async {
     if (Platform.isAndroid) {
       var storagePermission = await Permission.storage.status;
 
-      // Verifica a versão do Android
       if (Platform.version.contains('11') ||
           Platform.version.contains('12') ||
           Platform.version.contains('13')) {
         storagePermission = await Permission.manageExternalStorage.status;
       }
 
-      // Solicita a permissão se não estiver concedida
       if (!storagePermission.isGranted) {
         if (Platform.version.contains('11') ||
             Platform.version.contains('12') ||
@@ -52,7 +53,6 @@ class _GalleryPickerState extends State<GalleryPicker> {
       }
 
       if (storagePermission.isGranted) {
-        // Abre a galeria se a permissão for concedida
         try {
           final String? imagePath =
               await MyApp.platform.invokeMethod('openGallery');
@@ -72,16 +72,38 @@ class _GalleryPickerState extends State<GalleryPicker> {
     }
   }
 
-  // Método para obter a descrição da imagem usando a API Gemini
+  // Método para obter a descrição da imagem usando a API Gemini e reproduzir em áudio
   Future<void> _getImageDescription() async {
-    // Substitua pela sua chave de API
     final apiKey = 'AIzaSyD_VbN3miCOIDOr0r2wDvWbzUufg9eBzjc';
     final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     try {
       final imageBytes = await File(_imagePath!).readAsBytes();
-      final prompt = TextPart("Descreva o conteúdo desta imagem.");
-      final imagePart = DataPart('image/jpg', imageBytes);
+      final fileType = path.extension(_imagePath!).toLowerCase();
+
+      String mimeType;
+      switch (fileType) {
+        case '.png':
+          mimeType = 'image/png';
+          break;
+        case '.webp':
+          mimeType = 'image/webp';
+          break;
+        case '.gif':
+          mimeType = 'image/gif';
+          break;
+        case '.bmp':
+          mimeType = 'image/bmp';
+          break;
+        case '.jpeg':
+        case '.jpg':
+        default:
+          mimeType = 'image/jpeg';
+      }
+
+      final prompt = TextPart(
+          "Descreva o conteúdo desta imagem.A descricão deve ser em lingua portuguesa.");
+      final imagePart = DataPart(mimeType, imageBytes);
 
       final response = await model.generateContent([
         Content.multi([prompt, imagePart])
@@ -90,12 +112,24 @@ class _GalleryPickerState extends State<GalleryPicker> {
       setState(() {
         _imageDescription = response.text;
       });
+
+      // Reproduz o texto da descrição em áudio
+      if (_imageDescription != null) {
+        await _speakText(_imageDescription!);
+      }
     } catch (e) {
       print('Erro ao descrever imagem: $e');
       setState(() {
         _imageDescription = 'Erro ao descrever imagem.';
       });
     }
+  }
+
+  // Função para sintetizar e reproduzir o texto em áudio
+  Future<void> _speakText(String text) async {
+    await flutterTts.setLanguage("pt-BR");
+    await flutterTts.setSpeechRate(0.5); // Configura a velocidade
+    await flutterTts.speak(text); // Reproduz o texto em áudio
   }
 
   @override

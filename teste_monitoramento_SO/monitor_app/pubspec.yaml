@@ -39,6 +39,7 @@ dependencies:
   google_generative_ai: ^0.4.6
   permission_handler: ^10.2.0
   path: ^1.9.0
+  flutter_tts: ^3.5.2
 
 
 dev_dependencies:
