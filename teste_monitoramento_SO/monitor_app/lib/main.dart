@@ -6,6 +6,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:monitor_app/permisoes/permissao_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter_tts/flutter_tts.dart';
 
 void main() {
   runApp(MyApp());
@@ -30,6 +31,7 @@ class GalleryPicker extends StatefulWidget {
 class _GalleryPickerState extends State<GalleryPicker> {
   String? _imagePath;
    String? _imageDescription;
+   FlutterTts flutterTts = FlutterTts();
 
   Future<void> _openGallery() async {
     try {
@@ -45,6 +47,12 @@ class _GalleryPickerState extends State<GalleryPicker> {
     } on PlatformException catch (e) {
       print("Failed to open gallery: '${e.message}'.");
     }
+  }
+
+ Future<void> _speakText(String text) async {
+    await flutterTts.setLanguage("pt-BR");
+    await flutterTts.setSpeechRate(0.5); // Configura a velocidade
+    await flutterTts.speak(text); // Reproduz o texto em áudio
   }
 
  Future<void> _getImageDescription() async {
@@ -94,6 +102,10 @@ class _GalleryPickerState extends State<GalleryPicker> {
       print(response.text);
       print(response);
 
+      if (_imageDescription != null) {
+        await _speakText(_imageDescription!);
+      }
+
       // Reproduz o texto da descrição em áudio
       
     } catch (e) {
@@ -127,6 +139,16 @@ class _GalleryPickerState extends State<GalleryPicker> {
                 textAlign: TextAlign.center,
               ),
             ],
+
+            if (_imageDescription != null) ...[
+                  SizedBox(height: 20),
+                  Text(
+                    _imageDescription!,
+                    style: TextStyle(fontSize: 14, color: Colors.black),
+                    textAlign: TextAlign.center,
+                  ),
+              ]
+
           ],
         ),
       ),
