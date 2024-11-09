@@ -142,12 +142,48 @@ class _GalleryPickerState extends State<GalleryPicker> {
 
             if (_imageDescription != null) ...[
                   SizedBox(height: 20),
-                  Text(
-                    _imageDescription!,
-                    style: TextStyle(fontSize: 14, color: Colors.black),
-                    textAlign: TextAlign.center,
+                  Center(
+                    child:Text('Descrição da imagem:', 
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,  // Deixa o texto em negrito
+                                      fontSize: 23,  // Define o tamanho da fonte
+                                      fontFamily: 'Roboto',  // Escolhe a fonte (você pode usar fontes personalizadas também)
+                                      color: Colors.black,  // Define a cor do texto
+                              )) ,  
+     
+                  
                   ),
+                  
+                  Center(
+                    child: Text(_imageDescription ?? "" ,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,  // Deixa o texto em negrito
+                                fontSize: 20,  // Define o tamanho da fonte
+                                fontFamily: 'Roboto',  // Escolhe a fonte (você pode usar fontes personalizadas também)
+                                color: Colors.black,  // Define a cor do texto
+                              )
+                              ),
+                  ),
+                  
+                  SizedBox(height: 20),
               ]
+            ,
+            if (_imageDescription == null && _imagePath!=null) ...[
+                  SizedBox(height: 20),
+                  Center(
+                    child: Text('Carregando a descrição da imagem ...' ,
+                    style: TextStyle(
+                        fontWeight: FontWeight.normal,  // Deixa o texto em negrito
+                        fontSize: 19,  // Define o tamanho da fonte
+                        fontFamily: 'Roboto',  // Escolhe a fonte (você pode usar fontes personalizadas também)
+                        color: Colors.black,  // Define a cor do texto
+                      )),
+                  ),
+
+                  SizedBox(height: 20),
+                  CircularProgressIndicator()
+                  
+            ]
 
           ],
         ),
