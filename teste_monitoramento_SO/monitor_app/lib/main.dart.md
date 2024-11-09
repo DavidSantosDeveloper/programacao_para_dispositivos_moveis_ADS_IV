@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:monitor_app/permisoes/permissao_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path/path.dart' as path;
 
@@ -48,11 +47,6 @@ class _GalleryPickerState extends State<GalleryPicker> {
   }
 
  Future<void> _getImageDescription() async {
-
-   await checar_permissao();
-   
-
-    
     final apiKey = 'AIzaSyD_VbN3miCOIDOr0r2wDvWbzUufg9eBzjc';
     final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
@@ -92,7 +86,6 @@ class _GalleryPickerState extends State<GalleryPicker> {
         _imageDescription = response.text;
       });
       print(response.text);
-      print(response);
 
       // Reproduz o texto da descrição em áudio
       
