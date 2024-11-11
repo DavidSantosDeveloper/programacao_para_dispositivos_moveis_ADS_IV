@@ -6,7 +6,8 @@ import 'package:path/path.dart' as path;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:typed_data';
-import 'package:image/image.dart' as img;
+
+ import 'package:image/image.dart' as img;  
 
 void main() {
   runApp(MyApp());
@@ -95,44 +96,71 @@ class _GalleryPickerState extends State<GalleryPicker> {
     });
   }
 
-  Future<void> _getImageDescription(String filePath) async {
-    final apiKey = 'AIzaSyD_VbN3miCOIDOr0r2wDvWbzUufg9eBzjc';
-    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
-    try {
-      final imageFile = File(filePath);
-      final imageBytes = await imageFile.readAsBytes();
-      final image = img.decodeImage(imageBytes);
 
-      if (image == null) {
-        setState(() {
-          _imageDescription = 'Erro ao processar a imagem.';
-        });
-        return;
-      }
+Future<void> _getImageDescription(String filePath) async {
+  final apiKey = 'AIzaSyD_VbN3miCOIDOr0r2wDvWbzUufg9eBzjc';
+  final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
-      final resizedImage = img.copyResize(image, width: 800);
-      final resizedBytes = img.encodeJpg(resizedImage);
+  try {
+    // Carregar a imagem
+    final imageFile = File(filePath);
+    final imageBytes = await imageFile.readAsBytes();
+    final image = img.decodeImage(imageBytes); // Decodifica os bytes da imagem
 
-      final prompt = TextPart("Descreva o conteúdo desta imagem em português.");
-      final imagePart = DataPart("image/jpeg", resizedBytes);
-
-      final response = await model.generateContent([Content.multi([prompt, imagePart])]);
-
+    if (image == null) {
+      print('Erro ao decodificar imagem.');
       setState(() {
-        _imageDescription = response.text ?? 'Descrição não disponível.';
+        _imageDescription = 'Erro ao processar a imagem.';
       });
-
-      if (_imageDescription != null) {
-        await flutterTts.speak(_imageDescription!);
-      }
-    } catch (e) {
-      print('Erro ao descrever imagem: $e');
-      setState(() {
-        _imageDescription = 'Erro ao descrever imagem: $e';
-      });
+      return;
     }
+
+    // Redimensionar a imagem
+    final resizedImage = img.copyResize(image, width: 800); // Reduz a largura para 800px, mantendo a proporção
+    final resizedBytes = img.encodeJpg(resizedImage);  // Codifica novamente para o formato JPEG
+
+    final fileType = path.extension(filePath).toLowerCase();
+    String mimeType;
+
+    switch (fileType) {
+      case '.png':
+        mimeType = 'image/png';
+        break;
+      case '.webp':
+        mimeType = 'image/webp';
+        break;
+      case '.gif':
+        mimeType = 'image/gif';
+        break;
+      case '.bmp':
+        mimeType = 'image/bmp';
+        break;
+      case '.jpeg':
+      case '.jpg':
+      default:
+        mimeType = 'image/jpeg';
+    }
+
+    final prompt = TextPart("Descreva o conteúdo desta imagem em português.");
+    final imagePart = DataPart(mimeType, resizedBytes);  // Envia a imagem redimensionada
+
+    final response = await model.generateContent([Content.multi([prompt, imagePart])]);
+
+    setState(() {
+      _imageDescription = response.text ?? 'Descrição não disponível.';
+    });
+
+    if (_imageDescription != null) {
+      await flutterTts.speak(_imageDescription!);
+    }
+  } catch (e) {
+    print('Erro ao descrever imagem: $e');
+    setState(() {
+      _imageDescription = 'Erro ao descrever imagem: $e';
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -144,55 +172,19 @@ class _GalleryPickerState extends State<GalleryPicker> {
           ? Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                Expanded(
-                  child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 4,
-                      mainAxisSpacing: 4,
-                    ),
-                    itemCount: _albums.length,
-                    itemBuilder: (context, index) {
-                      return FutureBuilder<List<AssetEntity>>(
-                        future: _albums[index].getAssetListPaged(page: 0, size: 1), // Pegando a primeira imagem
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                            return GestureDetector(
-                              onTap: () {
-                                _loadImages(_albums[index]);
-                              },
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: snapshot.data!.isNotEmpty
-                                        ? FutureBuilder<Uint8List?>(
-                                            future: snapshot.data![0].thumbnailDataWithSize(ThumbnailSize(200, 200)),
-                                            builder: (context, thumbnailSnapshot) {
-                                              if (thumbnailSnapshot.connectionState == ConnectionState.done && thumbnailSnapshot.hasData) {
-                                                return Image.memory(
-                                                  thumbnailSnapshot.data!,
-                                                  fit: BoxFit.cover,
-                                                );
-                                              }
-                                              return Container(color: Colors.grey[300]);
-                                            },
-                                          )
-                                        : Container(color: Colors.grey[300]),
-                                  ),
-                                  Text(
-                                    _albums[index].name,
-                                    style: TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                          return Container(color: Colors.grey[300]);
-                        },
-                      );
-                    },
-                  ),
+                DropdownButton<AssetPathEntity>(
+                  hint: Text("Selecione uma categoria"),
+                  items: _albums.map((album) {
+                    return DropdownMenuItem(
+                      value: album,
+                      child: Text(album.name),
+                    );
+                  }).toList(),
+                  onChanged: (album) {
+                    if (album != null) {
+                      _loadImages(album);
+                    }
+                  },
                 ),
                 Expanded(
                   child: GridView.builder(
